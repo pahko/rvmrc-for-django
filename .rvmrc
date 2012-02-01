@@ -1,0 +1,22 @@
+go_to=$(pwd) # directory opened
+
+while [ ! -e ".rvmrc" ]; do
+    cd ..
+done
+
+if [ -f bin/activate ]; then
+    source bin/activate
+else
+    os=$(uname -r) # Get the name of the current linux kernel
+    if [[ $os =~ ARCH ]]; then # Archlinux use python3 by default, django needs 2.X
+        virtualenv . -p /usr/bin/python2.7
+    else
+        virtualenv --no-site-packages .
+    fi
+    source bin/activate
+    manage_file=$(find | grep manage.py)
+    directory=${manage_file%manage.py}
+    pip install -r "${directory}requirements.txt"
+fi
+
+cd $go_to # go to initial destination directory
