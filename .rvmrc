@@ -7,11 +7,13 @@ done
 if [ -f bin/activate ]; then
     source bin/activate
 else
-    os=$(uname -r) # Get the name of the current linux kernel
-    if [[ $os =~ ARCH ]]; then # Archlinux use python3 by default, django needs 2.X
-        virtualenv . -p /usr/bin/python2.7
+    if type -P virtualenv &> /dev/null; then
+        virtualenv . --no-site-packages
+    elif type -P virtualenv2 &> /dev/null; then
+        virtualenv2 .
     else
-        virtualenv --no-site-packages .
+        echo "Please install virtualenv"
+        return
     fi
     source bin/activate
     manage_file=$(find | grep manage.py)
