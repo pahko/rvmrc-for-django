@@ -1,11 +1,60 @@
+REQUIREMENTS='requirements.txt'
+DEV_REQUIREMENTS='dev-requirements.txt'
+
+install_requirements() {
+    file=$1$REQUIREMENTS
+    if [ -f $file ]; then
+        pip install -r $file
+        echo $(stat -c %Y $file) > ${1}r__.pyc
+    fi
+}
+
+install_dev_requirements() {
+    file=$1$DEV_REQUIREMENTS
+    if [ -f $file ]; then
+        pip install -r $file
+        echo $(stat -c %Y $file) > ${1}d__.pyc
+    fi
+}
+
+update_requirements() {
+    requirements=${1}r__.pyc
+    if [ -f $requirements ]; then
+        last_modified=$(cat $requirements | head -1)
+        if [ $(stat -c %Y $1$REQUIREMENTS) -gt $last_modified ]; then
+            install_requirements $1
+        fi
+    else
+        install_requirements $1
+    fi
+}
+
+update_dev_requirements() {
+    dev_requirements=${1}d__.pyc
+    if [ -f $dev_requirements ]; then
+        last_modified=$(cat $dev_requirements | head -1)
+        if [ $(stat -c %Y $1$DEV_REQUIREMENTS) -gt $last_modified ]; then
+            install_dev_requirements $1
+        fi
+    else
+        install_dev_requirements $1
+    fi
+}
+
 go_to=$(pwd) # directory opened
 
 while [ ! -e ".rvmrc" ]; do
     cd ..
 done
 
+# find django project directory
+manage_file=$(find | grep manage.py | head -1)
+directory=${manage_file%manage.py}
+
 if [ -f bin/activate ]; then
     source bin/activate
+    update_requirements $directory
+    update_dev_requirements $directory
 else
     if type -P virtualenv &> /dev/null; then
         virtualenv . --no-site-packages
@@ -16,9 +65,13 @@ else
         return
     fi
     source bin/activate
-    manage_file=$(find | grep manage.py)
-    directory=${manage_file%manage.py}
-    pip install -r "${directory}requirements.txt"
+    install_requirements $directory
+    install_dev_requirements $directory
 fi
 
 cd $go_to # go to initial destination directory
+
+unset -f install_requirements
+unset -f install_dev_requirements
+unset -f update_requirements
+unset -f update_dev_requirements
