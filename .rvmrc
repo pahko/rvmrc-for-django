@@ -48,7 +48,7 @@ while [ ! -e ".rvmrc" ]; do
 done
 
 # find django project directory
-manage_file=$(find * | grep manage.py | head -1)
+manage_file=$(find . | grep manage.py | head -1)
 directory=${manage_file%manage.py}
 
 if [ -f bin/activate ]; then
