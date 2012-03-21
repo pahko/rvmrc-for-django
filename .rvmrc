@@ -16,10 +16,26 @@ activate_virtualenv() {
     echo -en $disable
 }
 
+check_requirements() {
+    echo -en $light_green
+    echo -n "Checking requirements... "
+    pip install --no-install --no-download -r "${directory}dev-requirements.txt" > /dev/null
+    return_code=$?
+    if [ $return_code == 1 ]; then
+        echo "[NEED UPDATE]"
+    else
+        echo "[OK]"
+    fi
+    echo -en $disable
+    return $return_code
+}
+
 install_requirements() {
     echo -en $light_green
     echo -n "Installing requirements... "
-    pip install -r "${directory}dev-requirements.txt" > /dev/null
+    echo -e $disable
+    pip install -r "${directory}dev-requirements.txt"
+    echo -en $light_green
     echo "Done."
     echo -en $disable
 }
@@ -48,10 +64,13 @@ fi
 manage_file=$(find . | grep manage.py | grep -v lib  | grep -v build | head -1)
 directory=${manage_file%manage.py}
 
-install_requirements
-
+check_requirements
+if [ $? == 1 ]; then
+    install_requirements
+fi
 
 cd $current_directory # Go to initial destination directory
 
 unset -f install_requirements
+unset -f check_requirements
 unset -f activate_virtualenv
