@@ -1,77 +1,76 @@
-REQUIREMENTS='requirements.txt'
-DEV_REQUIREMENTS='dev-requirements.txt'
-
-install_requirements() {
-    file=$1$REQUIREMENTS
-    if [ -f $file ]; then
-        pip install -r $file
-        echo $(stat -c %Y $file) > ${1}r__.pyc
-    fi
-}
-
-install_dev_requirements() {
-    file=$1$DEV_REQUIREMENTS
-    if [ -f $file ]; then
-        pip install -r $file
-        echo $(stat -c %Y $file) > ${1}d__.pyc
-    fi
-}
-
-update_requirements() {
-    requirements=${1}r__.pyc
-    if [ -f $requirements ]; then
-        last_modified=$(cat $requirements | head -1)
-        if [ $(stat -c %Y $1$REQUIREMENTS) -gt $last_modified ]; then
-            install_requirements $1
-        fi
-    else
-        install_requirements $1
-    fi
-}
-
-update_dev_requirements() {
-    dev_requirements=${1}d__.pyc
-    if [ -f $dev_requirements ]; then
-        last_modified=$(cat $dev_requirements | head -1)
-        if [ $(stat -c %Y $1$DEV_REQUIREMENTS) -gt $last_modified ]; then
-            install_dev_requirements $1
-        fi
-    else
-        install_dev_requirements $1
-    fi
-}
-
-go_to=$(pwd) # directory opened
+current_directory=$(pwd) # Save the current directory
 
 while [ ! -e ".rvmrc" ]; do
     cd ..
 done
 
-# find django project directory
-manage_file=$(find * | grep manage.py | head -1)
-directory=${manage_file%manage.py}
+light_green="\033[1;32m"
+light_red="\033[1;32m"
+disable="\033[0m"
+
+activate_virtualenv() {
+    echo -en $light_green
+    echo -n "Activating virtualenv... "
+    source bin/activate
+    echo "Done."
+    echo -en $disable
+}
+
+check_requirements() {
+    echo -en $light_green
+    echo -n "Checking requirements... "
+    pip install --no-install --no-download -r "${directory}dev-requirements.txt" > /dev/null
+    return_code=$?
+    if [ $return_code == 1 ]; then
+        echo "[NEED UPDATE]"
+    else
+        echo "[OK]"
+    fi
+    echo -en $disable
+    return $return_code
+}
+
+install_requirements() {
+    echo -en $light_green
+    echo -n "Installing requirements... "
+    echo -e $disable
+    pip install -r "${directory}dev-requirements.txt"
+    echo -en $light_green
+    echo "Done."
+    echo -en $disable
+}
 
 if [ -f bin/activate ]; then
-    source bin/activate
-    update_requirements $directory
-    update_dev_requirements $directory
+    activate_virtualenv
 else
+    echo -en $light_green
+    echo -n "Creating new virtual environment... "
     if type -P virtualenv &> /dev/null; then
-        virtualenv . --no-site-packages
+        virtualenv . --no-site-packages > /dev/null
     elif type -P virtualenv2 &> /dev/null; then
-        virtualenv2 .
+        virtualenv2 . > /dev/null
     else
+        echo -en $light_red
         echo "Please install virtualenv"
+        echo -en $disable
         return
     fi
-    source bin/activate
-    install_requirements $directory
-    install_dev_requirements $directory
+    echo "Done."
+    echo -en $disable
+    activate_virtualenv
 fi
 
-cd $go_to # go to initial destination directory
+# find django project directory
+manage_file=$(find . | grep manage.py | grep -v lib  | grep -v build | head -1)
+directory=${manage_file%manage.py}
+
+check_requirements
+if [ $? == 1 ]; then
+    install_requirements
+fi
+
+cd $current_directory # Go to initial destination directory
 
 unset -f install_requirements
-unset -f install_dev_requirements
-unset -f update_requirements
-unset -f update_dev_requirements
+unset -f check_requirements
+unset -f activate_virtualenv
