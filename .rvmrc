@@ -61,7 +61,7 @@ else
 fi
 
 # find django project directory
-manage_file=$(find . | grep manage.py | grep -v lib  | grep -v build | head -1)
+manage_file=$(ls */manage.py)
 directory=${manage_file%manage.py}
 
 check_requirements
